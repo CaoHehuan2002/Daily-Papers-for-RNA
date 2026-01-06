@@ -4,8 +4,8 @@ import time
 from datetime import datetime
 import requests
 
-# 读取爬取的论文数据
-INPUT_PATH = "../data/arxiv.json"
+# 读取爬取的论文数据（与 fetch_arxiv.py 的汇总输出保持一致）
+INPUT_PATH = "../data/arxiv_all.json"
 OUTPUT_DIR = "../data"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
