@@ -4,16 +4,17 @@ import time
 from datetime import datetime
 import requests
 
-# 读取爬取的论文数据
-INPUT_PATH = "../data/arxiv.json"
+# 读取爬取的汇总论文数据
+INPUT_PATH = "../data/arxiv_all.json"
 OUTPUT_DIR = "../data"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# 获取当日日期（用于生成markdown文件名）
+# 获取当日日期
 today = datetime.now().strftime("%Y-%m-%d")
-OUTPUT_MD = f"{OUTPUT_DIR}/digest_{today}.md"
+# 汇总markdown文件
+ALL_OUTPUT_MD = f"{OUTPUT_DIR}/digest_all_{today}.md"
 
-# 读取通义千问API_KEY（从GitHub Secrets获取，本地测试可新建.env文件）
+# 读取通义千问API_KEY
 QWEN_API_KEY = os.getenv("QWEN_API_KEY")
 QWEN_API_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
 
@@ -49,30 +50,70 @@ def get_qwen_summary(text):
         return f"摘要生成失败: {str(e)[:50]}"
 
 def generate_markdown(papers):
-    """生成论文日报的markdown文件"""
-    md_header = f"""# arXiv 论文日报 {today}
-> 自动抓取并筛选 | 共 {len(papers)} 篇论文
+    """生成：每个主题独立md文件 + 1个汇总md文件"""
+    # 第一步：按主题分类整理论文
+    topic_papers = {}
+    for paper in papers:
+        topic = paper["category"]
+        if topic not in topic_papers:
+            topic_papers[topic] = []
+        topic_papers[topic].append(paper)
+
+    # 第二步：为每个主题生成独立的markdown文件
+    for topic_name, topic_paper_list in topic_papers.items():
+        topic_md_name = f"digest_{topic_name.replace(' ','_')}_{today}.md"
+        topic_md_path = f"{OUTPUT_DIR}/{topic_md_name}"
+        
+        topic_md_header = f"""# arXiv 论文日报 - {topic_name} {today}
+> 自动抓取并筛选 | 本组共 {len(topic_paper_list)} 篇论文
 ---
 """
-    md_body = ""
-    for idx, paper in enumerate(papers, 1):
-        authors = ", ".join(paper["authors"])[:200]
-        summary = paper["summary"][:500]
-        qwen_summary = get_qwen_summary(summary)
-        md_body += f"""## {idx}. [{paper['title']}]({paper['url']})
+        topic_md_body = ""
+        for idx, paper in enumerate(topic_paper_list, 1):
+            authors = ", ".join(paper["authors"])[:200]
+            summary = paper["summary"][:500]
+            qwen_summary = get_qwen_summary(summary)
+            topic_md_body += f"""## {idx}. [{paper['title']}]({paper['url']})
 **arXiv ID**: {paper['arxiv_id']}
 **作者**: {authors}
-**分类**: {paper['category']}
 **更新时间**: {paper['updated']}
 **论文摘要**: {summary}
 **核心总结**: {qwen_summary}
 
 ---
 """
-    md_content = md_header + md_body
-    with open(OUTPUT_MD, "w", encoding="utf-8") as f:
-        f.write(md_content)
-    print(f"Markdown日报生成完成：{OUTPUT_MD}")
+        # 保存单个主题的md文件
+        with open(topic_md_path, "w", encoding="utf-8") as f:
+            f.write(topic_md_header + topic_md_body)
+        print(f"{topic_name} 主题日报生成完成：{topic_md_name}")
+
+    # 第三步：生成汇总markdown文件
+    all_md_header = f"""# arXiv 论文日报 - 全主题汇总 {today}
+> 自动抓取并筛选 | 共 {len(papers)} 篇论文
+---
+"""
+    all_md_body = ""
+    for topic_name, topic_paper_list in topic_papers.items():
+        all_md_body += f"""# {topic_name}
+> 本组共 {len(topic_paper_list)} 篇论文
+---
+"""
+        for idx, paper in enumerate(topic_paper_list, 1):
+            authors = ", ".join(paper["authors"])[:200]
+            summary = paper["summary"][:500]
+            qwen_summary = get_qwen_summary(summary)
+            all_md_body += f"""## {idx}. [{paper['title']}]({paper['url']})
+**arXiv ID**: {paper['arxiv_id']}
+**作者**: {authors}
+**更新时间**: {paper['updated']}
+**论文摘要**: {summary}
+**核心总结**: {qwen_summary}
+
+---
+"""
+    with open(ALL_OUTPUT_MD, "w", encoding="utf-8") as f:
+        f.write(all_md_header + all_md_body)
+    print(f"全主题汇总日报生成完成：digest_all_{today}.md")
 
 if __name__ == "__main__":
     papers = load_papers()

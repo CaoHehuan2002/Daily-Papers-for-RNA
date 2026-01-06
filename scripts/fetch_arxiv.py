@@ -8,9 +8,10 @@ from datetime import datetime, timedelta
 with open("../topics.yml", "r", encoding="utf-8") as f:
     config = yaml.safe_load(f)
 
-# 创建data目录（自动生成，无需手动建）
+# 创建data目录（自动生成）
 os.makedirs("../data", exist_ok=True)
-OUTPUT_PATH = "../data/arxiv.json"
+# 汇总文件路径（保留所有论文）
+ALL_OUTPUT_PATH = "../data/arxiv_all.json"
 
 def fetch_papers_by_topic():
     all_papers = []
@@ -39,6 +40,7 @@ def fetch_papers_by_topic():
             sort_order=arxiv.SortOrder.Descending
         )
 
+        topic_papers = []
         # 筛选论文：排除指定关键词
         for result in search.results():
             title_abs = f"{result.title} {result.summary}".lower()
@@ -62,17 +64,24 @@ def fetch_papers_by_topic():
                 "category": topic_name,
                 "categories": result.categories
             }
+            topic_papers.append(paper)
             all_papers.append(paper)
+        
+        # 核心改动：为每个主题生成独立的json文件
+        topic_json_name = f"arxiv_{topic_name.replace(' ','_')}.json"
+        topic_json_path = f"../data/{topic_json_name}"
+        with open(topic_json_path, "w", encoding="utf-8") as f:
+            json.dump(topic_papers, f, ensure_ascii=False, indent=2)
+        print(f"{topic_name} 主题爬取完成，共 {len(topic_papers)} 篇，保存至 {topic_json_name}")
     
-    # 去重 + 按更新时间排序
+    # 去重 + 按更新时间排序，保存汇总文件
     unique_papers = list({p['arxiv_id']: p for p in all_papers}.values())
     unique_papers.sort(key=lambda x: x['updated'], reverse=True)
     
-    # 保存到data目录
-    with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
+    with open(ALL_OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(unique_papers, f, ensure_ascii=False, indent=2)
     
-    print(f"爬取完成！共获取 {len(unique_papers)} 篇论文，已保存至 {OUTPUT_PATH}")
+    print(f"全部主题爬取完成！共获取 {len(unique_papers)} 篇论文，汇总保存至 arxiv_all.json")
     return unique_papers
 
 if __name__ == "__main__":
