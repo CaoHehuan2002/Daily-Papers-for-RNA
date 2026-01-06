@@ -22,6 +22,8 @@ ALL_OUTPUT_PATH = DATA_DIR / "arxiv_all.json"
 def fetch_papers_by_topic():
     all_papers = []
     print(f"开始读取topics.yml的筛选规则，共 {len(config['profiles'])} 个主题")
+    # 使用新版 Client.results() 接口，避免 Search.results() 的弃用警告。
+    client = arxiv.Client()
     
     for profile in config['profiles']:
         topic_name = profile['name']
@@ -48,7 +50,7 @@ def fetch_papers_by_topic():
 
         topic_papers = []
         # 筛选论文：排除指定关键词
-        for result in search.results():
+        for result in client.results(search):
             title_abs = f"{result.title} {result.summary}".lower()
             exclude_flag = False
             for ek in exclude_keywords:
