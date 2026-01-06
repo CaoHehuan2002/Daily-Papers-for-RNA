@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timedelta
 
 # 读取根目录的topics.yml配置文件
-with open("../topics.yml", "r", encoding="utf-8") as f:
+with open("topics.yml", "r", encoding="utf-8") as f:
     config = yaml.safe_load(f)
 
 # 创建data目录（自动生成）
