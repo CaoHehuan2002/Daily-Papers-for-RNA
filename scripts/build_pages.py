@@ -7,10 +7,10 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 OUT_DIR = BASE_DIR / "out"
-OUT_MD = OUT_DIR / f"digest_{today}.md"
 
 # 读取markdown文件路径
 today = datetime.now().strftime("%Y-%m-%d")
+OUT_MD = OUT_DIR / f"digest_{today}.md"
 MD_PATH = DATA_DIR / f"digest_{today}.md"
 # 输出目录（仓库根目录下的out）
 os.makedirs(OUT_DIR, exist_ok=True)
